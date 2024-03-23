@@ -11,12 +11,12 @@ from nltk.corpus import stopwords
 import nltk
 from gtts import gTTS
 import speech_recognition as sr
+from langdetect import detect
 
 nltk.download('punkt')
 nltk.download('stopwords')
 
 app = Flask(__name__, static_url_path='/static')
-
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 
 def preprocess_audio(file_path):
@@ -51,51 +51,43 @@ def generate_summary(audio_text):
     return ' '.join(summary)
 
 def transcribe_audio(audio_file):
-    # Use a speech recognition library to transcribe the audio file into text
     recognizer = sr.Recognizer()
     with sr.AudioFile(audio_file) as source:
-        audio_data = recognizer.record(source)  # Read the entire audio file
+        audio_data = recognizer.record(source)
         transcribed_text = recognizer.recognize_google(audio_data)
     return transcribed_text
 
 def generate_summary_audio(summary_text, output_path):
     summaries_folder = 'static/summaries'
-    os.makedirs(summaries_folder, exist_ok=True)  # Create the folder if it doesn't exist
+    os.makedirs(summaries_folder, exist_ok=True)
     output_file = os.path.join(summaries_folder, "summary_audio.mp3")
     tts = gTTS(text=summary_text, lang='en')
     tts.save(output_file)
-    return output_file  # Return the path to the generated audio file
+    return output_file
 
-
+def identify_language(audio_text):
+    try:
+        language = detect(audio_text)
+        return language
+    except:
+        return "Language detection failed"
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        print("Received a POST request")
-        print("Request form data:", request.form)
-        print("Request files:", request.files)
         file = request.files['file']
-        print("Received file:", file)
         if file:
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            print("Saving file to:", file_path)
             file.save(file_path)
-            
             audio = preprocess_audio(file_path)
             features = extract_features(audio)
             clusters = cluster_audio(features)
-            
-            # Transcribe the uploaded audio file into text
             audio_text = transcribe_audio(file_path)
-            
-            # Generate a summary from the transcribed text
             summary = generate_summary(audio_text)
-            
-            # Generate audio summary
             generate_summary_audio(summary, "summary_audio.mp3")
-            
-            return render_template('index.html', summary=summary)
-    return render_template('index.html', summary=None)
+            language = identify_language(audio_text)
+            return render_template('index.html', summary=summary, language=language)
+    return render_template('index.html', summary=None, language=None)
 
 if __name__ == '__main__':
     app.run(debug=True)
