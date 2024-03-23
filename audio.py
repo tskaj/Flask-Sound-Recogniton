@@ -101,7 +101,7 @@ def index():
             audio = preprocess_audio(file_path)
             features = extract_features(audio)
             clusters = cluster_audio(features)
-            audio_text = transcribe_audio(file_path)
+            audio_text = transcribe_audio(file_path, audio)
             summary = generate_summary(audio_text)
             generate_summary_audio(summary, "summary_audio.mp3")
             language = identify_language(audio_text)
