@@ -20,6 +20,11 @@ nltk.download('stopwords')
 app = Flask(__name__, static_url_path='/static')
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 
+try:
+    os.makedirs("chunked")
+except:
+    pass
+
 def preprocess_audio(file_path):
     audio = AudioSegment.from_file(file_path)
     audio = audio.set_channels(1)
@@ -105,7 +110,7 @@ def index():
             summary = generate_summary(audio_text)
             generate_summary_audio(summary, "summary_audio.mp3")
             language = identify_language(audio_text)
-            return render_template('index.html', summary=summary, language=language)
+            return render_template('index.html', transcription=audio_text, summary=summary, language=language)
     return render_template('index.html', summary=None, language=None)
 
 if __name__ == '__main__':
