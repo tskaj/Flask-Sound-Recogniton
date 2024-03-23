@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Summary</title>
+</head>
+<body>
+    <h1>Upload Audio File</h1>
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <br>
+        <input type="checkbox" id="summary" name="output" value="summary">
+        <label for="summary">Summary</label><br>
+        <input type="checkbox" id="transcription" name="output" value="transcription">
+        <label for="transcription">Transcription</label><br>
+        <input type="checkbox" id="identification" name="output" value="identification">
+        <label for="identification">Identification</label><br>
+        <button type="submit">Upload</button>
+    </form>
+    {% if summary %}
+    <h2>Output:</h2>
+    {% if 'summary' in request.form.getlist('output') %}
+    <h3>Summary:</h3>
+    <p>{{ summary }}</p>
+    <audio controls>
+        <source src="{{ url_for('static', filename='summaries/summary_audio.mp3') }}" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    
+    {% endif %}
+    {% if 'transcription' in request.form.getlist('output') %}
+    <h3>Transcription:</h3>
+    <!-- Add transcription output here -->
+    {% endif %}
+    {% if 'identification' in request.form.getlist('output') %}
+    <h3>Identification:</h3>
+    <!-- Add identification output here -->
+    {% endif %}
+    {% endif %}
+</body>
+</html>
