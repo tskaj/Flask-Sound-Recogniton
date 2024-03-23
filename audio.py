@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 from pydub import AudioSegment
+from pydub.utils import make_chunks
 import os
 import numpy as np
 import librosa
@@ -18,6 +19,11 @@ nltk.download('stopwords')
 app = Flask(__name__, static_url_path='/static')
 
 app.config['UPLOAD_FOLDER'] = 'uploads/'
+
+try:
+    os.makedirs("chunked")
+except:
+    pass
 
 def preprocess_audio(file_path):
     audio = AudioSegment.from_file(file_path)
@@ -38,7 +44,7 @@ def cluster_audio(features):
     clusters = kmeans.fit_predict(features)
     return clusters
 
-def generate_summary(audio_text):
+def generate_summary(audio_text="This is placeholder text"):
     sentences = sent_tokenize(audio_text)
     stop_words = set(stopwords.words('english'))
     filtered_sentences = [sentence for sentence in sentences if sentence.lower() not in stop_words]
@@ -50,13 +56,30 @@ def generate_summary(audio_text):
     summary = [filtered_sentences[i] for i in top_sentences_idx]
     return ' '.join(summary)
 
-def transcribe_audio(audio_file):
-    # Use a speech recognition library to transcribe the audio file into text
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(audio_file) as source:
-        audio_data = recognizer.record(source)  # Read the entire audio file
-        transcribed_text = recognizer.recognize_google(audio_data)
-    return transcribed_text
+def transcribe_audio(audio_file, audio):
+    # Initialize recognizer
+
+    chunks = make_chunks(audio, 2000)
+    text = ""
+    for i, chunk in enumerate(chunks):
+        chunkName= "./chunked/"+audio_file+"-{0}.wav".format(i)
+        chunk.export(chunkName, format="wav")
+        file = chunkName
+        recognizer = sr.Recognizer()
+
+        # Load audio file
+        with sr.AudioFile(file) as source:
+            audio_data = recognizer.record(source)
+
+        # Recognize speech using Google Web Speech API
+        try:
+            text += recognizer.recognize_google(audio_data)
+            print(text)
+        except sr.UnknownValueError:
+            print("Google Web Speech API could not understand the audio")
+        except sr.RequestError as e:
+            print("Could not request results from Google Web Speech API; {0}".format(e))
+    return text
 
 def generate_summary_audio(summary_text, output_path):
     summaries_folder = 'static/summaries'
@@ -86,7 +109,7 @@ def index():
             clusters = cluster_audio(features)
             
             # Transcribe the uploaded audio file into text
-            audio_text = transcribe_audio(file_path)
+            audio_text = transcribe_audio(file.filename, audio)
             
             # Generate a summary from the transcribed text
             summary = generate_summary(audio_text)
@@ -94,7 +117,7 @@ def index():
             # Generate audio summary
             generate_summary_audio(summary, "summary_audio.mp3")
             
-            return render_template('index.html', summary=summary)
+            return render_template('index.html', summary=summary, transcription=audio_text)
     return render_template('index.html', summary=None)
 
 if __name__ == '__main__':
