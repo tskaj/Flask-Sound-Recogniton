@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 from pydub import AudioSegment
+from pydub.utils import make_chunks
 import os
 import numpy as np
 import librosa
@@ -50,12 +51,30 @@ def generate_summary(audio_text):
     summary = [filtered_sentences[i] for i in top_sentences_idx]
     return ' '.join(summary)
 
-def transcribe_audio(audio_file):
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(audio_file) as source:
-        audio_data = recognizer.record(source)
-        transcribed_text = recognizer.recognize_google(audio_data)
-    return transcribed_text
+def transcribe_audio(audio_file, audio):
+    # Initialize recognizer
+
+    chunks = make_chunks(audio, 2000)
+    text = ""
+    for i, chunk in enumerate(chunks):
+        chunkName= "./chunked/"+audio_file+"-{0}.wav".format(i)
+        chunk.export(chunkName, format="wav")
+        file = chunkName
+        recognizer = sr.Recognizer()
+
+        # Load audio file
+        with sr.AudioFile(file) as source:
+            audio_data = recognizer.record(source)
+
+        # Recognize speech using Google Web Speech API
+        try:
+            text += recognizer.recognize_google(audio_data)
+            print(text)
+        except sr.UnknownValueError:
+            print("Google Web Speech API could not understand the audio")
+        except sr.RequestError as e:
+            print("Could not request results from Google Web Speech API; {0}".format(e))
+    return text
 
 def generate_summary_audio(summary_text, output_path):
     summaries_folder = 'static/summaries'

@@ -27,6 +27,7 @@
             {% if 'transcription' in request.form.getlist('output') %}
             <div class="output-item">
                 <h3>Transcription:</h3>
+                <p>{{ transcription }}</p>
                 <!-- Add transcription output here -->
             </div>
             {% endif %}
